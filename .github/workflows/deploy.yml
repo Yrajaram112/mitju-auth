@@ -42,6 +42,19 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            pkill -f app.jar || true
-            cd /home/ubuntu/app
-            nohup java -jar *.jar > app.log 2>&1 &
+            # 1. Stop the old app
+            pkill -f 'java -jar' || true
+            
+            # 2. Navigate to the app folder
+            cd /home/${{ secrets.EC2_USERNAME }}/app
+            
+            # 3. Clean up old logs (optional but helpful)
+            rm -f app.log
+            
+            # 4. Run the new jar in the background
+            # We use 'disown' to make sure the process doesn't die when the SSH session ends
+            nohup java -jar *.jar > app.log 2>&1 & 
+            sleep 5
+            
+            # 5. Check if it actually stayed alive
+            ps aux | grep java
