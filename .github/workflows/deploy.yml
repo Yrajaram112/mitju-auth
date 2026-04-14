@@ -11,6 +11,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
 
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
