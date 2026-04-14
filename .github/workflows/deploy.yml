@@ -42,21 +42,28 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            # 1. Kill old process
             pgrep -f 'java -jar' | xargs kill -9 || true
             cd /home/${{ secrets.EC2_USERNAME }}/app
             rm -f app.log
             
-            # Start with a very small initial heap (Xms) 
-            # but allow it to grow to 512MB now that we have Swap
-            nohup java -Xms64m -Xmx512m -jar *.jar > app.log 2>&1 &
+            # 2. Optimized JVM arguments for 1GB RAM + Swap
+            # -XX:+UseSerialGC: Minimal memory overhead for GC
+            # -Xss256k: Reduce thread stack size (saves a lot of RAM)
+            nohup java -Xms64m -Xmx384m -Xss256k -XX:+UseSerialGC -jar *.jar > app.log 2>&1 &
             
-            # Wait 45 seconds (startup is slower when swapping)
-            sleep 45
-            
-            if grep -q "Started" app.log || grep -q "JVM running" app.log; then
-              echo "Application started successfully."
-            else
-              echo "Startup failed. Logs:"
-              tail -n 100 app.log
-              exit 1
-            fi
+            # 3. Use a "Soft" wait
+            # Instead of waiting 45s and checking once, we check every 5 seconds
+            # This helps us see the log even if it crashes halfway through
+            for i in {1..12}; do
+              if grep -q "Started" app.log || grep -q "JVM running" app.log; then
+                echo "Application started successfully."
+                exit 0
+              fi
+              echo "Waiting for app to start... (Attempt $i/12)"
+              sleep 10
+            done
+
+            echo "Startup timed out or failed. Final logs:"
+            tail -n 100 app.log
+            exit 1
