@@ -42,24 +42,21 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            # 1. Kill the old process, but don't kill the current shell
+            # 1. Kill old process
             pgrep -f 'java -jar' | xargs kill -9 || true
             
-            # 2. Navigate and clear logs
-            cd /home/${{ secrets.SERVER_USER }}/app
+            cd /home/${{ secrets.EC2_USERNAME }}/app
             
-            # 3. The "Double Detach" method
-            # ( > /dev/null 2>&1 & ) ensures  the shell doesn't wait for output
-            nohup java -jar *.jar > app.log 2>&1 &
+            # 2. Run with memory limits!
+            # We use 512MB max for a 1GB RAM server
+            nohup java -Xms128m -Xmx512m -jar *.jar > app.log 2>&1 &
             
-            # 4. Give it a moment to initialize
-            sleep 10
+            sleep 15
             
-            # 5. Check logs instead of ps aux (more reliable)
             if grep -q "Started" app.log || grep -q "JVM running" app.log; then
               echo "Application started successfully."
             else
-              echo "Application might have failed. Checking last 20 lines of log:"
-              tail -n 20 app.log
+              echo "Startup failed. Checking logs..."
+              tail -n 50 app.log
               exit 1
             fi
