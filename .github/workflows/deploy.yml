@@ -45,18 +45,24 @@ jobs:
             # 1. Kill old process
             pgrep -f 'java -jar' | xargs kill -9 || true
             
+            # 2. Clear old logs so we don't read old "Started" messages
             cd /home/${{ secrets.EC2_USERNAME }}/app
+            rm -f app.log
             
-            # 2. Run with memory limits!
-            # We use 512MB max for a 1GB RAM server
-            nohup java -Xms128m -Xmx512m -jar *.jar > app.log 2>&1 &
+            # 3. Check current memory before starting (for debugging)
+            free -m
             
-            sleep 15
+            # 4. Start with lower memory and MetaSpace limits
+            nohup java -Xms128m -Xmx384m -XX:MaxMetaspaceSize=128m -jar *.jar > app.log 2>&1 &
+            
+            # 5. Wait longer (Java 21 on a micro instance is slow)
+            sleep 30
             
             if grep -q "Started" app.log || grep -q "JVM running" app.log; then
               echo "Application started successfully."
             else
-              echo "Startup failed. Checking logs..."
+              echo "Startup failed. Printing system memory and app logs:"
+              free -m
               tail -n 50 app.log
               exit 1
             fi
