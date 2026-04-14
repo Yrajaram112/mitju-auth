@@ -46,7 +46,7 @@ jobs:
             pkill -f 'java -jar' || true
             
             # 2. Navigate to the app folder
-            cd /home/${{ secrets.EC2_USERNAME }}/app
+            cd /home/${{ secrets.SERVER_USER }}/app
             
             # 3. Clean up old logs (optional but helpful)
             rm -f app.log
