@@ -49,7 +49,7 @@ jobs:
             cd /home/${{ secrets.SERVER_USER }}/app
             
             # 3. The "Double Detach" method
-            # ( > /dev/null 2>&1 & ) ensures the shell doesn't wait for output
+            # ( > /dev/null 2>&1 & ) ensures  the shell doesn't wait for output
             nohup java -jar *.jar > app.log 2>&1 &
             
             # 4. Give it a moment to initialize
