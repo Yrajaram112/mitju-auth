@@ -42,27 +42,21 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            # 1. Kill old process
             pgrep -f 'java -jar' | xargs kill -9 || true
-            
-            # 2. Clear old logs so we don't read old "Started" messages
             cd /home/${{ secrets.EC2_USERNAME }}/app
             rm -f app.log
             
-            # 3. Check current memory before starting (for debugging)
-            free -m
+            # Start with a very small initial heap (Xms) 
+            # but allow it to grow to 512MB now that we have Swap
+            nohup java -Xms64m -Xmx512m -jar *.jar > app.log 2>&1 &
             
-            # 4. Start with lower memory and MetaSpace limits
-            nohup java -Xms128m -Xmx384m -XX:MaxMetaspaceSize=128m -jar *.jar > app.log 2>&1 &
-            
-            # 5. Wait longer (Java 21 on a micro instance is slow)
-            sleep 30
+            # Wait 45 seconds (startup is slower when swapping)
+            sleep 45
             
             if grep -q "Started" app.log || grep -q "JVM running" app.log; then
               echo "Application started successfully."
             else
-              echo "Startup failed. Printing system memory and app logs:"
-              free -m
-              tail -n 50 app.log
+              echo "Startup failed. Logs:"
+              tail -n 100 app.log
               exit 1
             fi
