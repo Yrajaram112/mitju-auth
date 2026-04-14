@@ -15,7 +15,7 @@ jobs:
       - name: Make Maven Wrapper executable
         run: chmod +x mvnw
 
-      - name: Build JAR
+      - name: Build JAR 
         run: ./mvnw clean package -DskipTests
 
       - name: Copy JAR to EC2
